@@ -30,39 +30,29 @@ class Customer {
     orderColor = possibleColors[int(random(possibleColors.length))];
   }
 
-  void stateTransitions() {
-    stateTimer++; // Increment the timer to handle state durations
+void stateTransitions() {
+  stateTimer++;
 
-    if (state.equals("arriving") && x >= targetX) {
-      state = "waiting"; // Transition to waiting once the customer arrives
-      waiting = true;    // Mark the customer as waiting
-      thoughtBubbleVisible = true; // Show the thought bubble
-      stateTimer = 0;    // Reset the timer when the state changes
-    } else if (state.equals("waiting") && stateTimer > 120) {
-      state = "ordering";  // Transition to ordering after waiting for a bit
-      stateTimer = 0;      // Reset the timer when the state changes
-    } else if (state.equals("eating") && stateTimer > 180) {
-      state = "exiting";   // Transition to exiting after eating for some time
-      leaving = true;      // Mark the customer as leaving
-    }
+  if (state.equals("arriving") && abs(x - targetX) < 2) {
+    state = "waiting";
+    waiting = true;
+    thoughtBubbleVisible = true;
+    stateTimer = 0;
   }
- 
-
-  void update() {
-    stateTransitions(); // Handle state transitions
-
-    if (state.equals("arriving")) {
-      x += 3; // Customer moves towards the target position
-    } else if (state.equals("waiting")) {
-      // Customer stays in the waiting position, thought bubble visible
-    } else if (state.equals("ordering")) {
-      x = width / 2; // Customer stays at the center of the screen during ordering
-    } else if (state.equals("eating")) {
-      x += 3; // Customer moves towards the eating area
-    } else if (state.equals("exiting")) {
-      x += 3;  // Customer moves off the screen
-    }
+  else if (state.equals("eating") && stateTimer > 180) {
+    state = "exiting";
+    leaving = true;
   }
+}
+void update() {
+  stateTransitions();
+  // Move smoothly to targetX
+  if (!state.equals("exiting")) {
+    x += (targetX - x) * 0.1;
+  } else {
+    x += 3;
+  }
+}
   
   boolean receiveFood(color givenColor) {
     if (state.equals("waiting") && colorsMatch(givenColor, orderColor)) {
