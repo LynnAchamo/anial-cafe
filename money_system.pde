@@ -44,66 +44,90 @@ void setup(){
 void draw(){
   image(background_image, 0,0);
 
-  
   fill(224, 214, 175);
-   rect(0,0,350,75);
+  rect(0,0,350,75);
   fill(0);
   textSize(30);
   text("money: $" + money, 30, 30);
   text("drag food to animal(+$" + foodCost +")", 20, 60);
-  
+
+//Draw food display box
   stroke(0);
   fill(200);
   rect(displayX, displayY, displaySize, displaySize, 10);
 
- 
   for (FoodCircle fc : circles) {
     fc.update();
     fc.display();
   }
-  
+
   for (int i = circles.size() - 1; i >= 0; i--) {
     FoodCircle fc = circles.get(i);
     if (fc.beingDragged && fc.isInCenter()) {
       circles.remove(i);
     }
   }
- // Draw food display box
-  stroke(0);
-  fill(200);
-  rect(displayX, displayY, displaySize, displaySize, 10);
 
-  // Draw and update food circles
-  for (FoodCircle fc : circles) {
-    fc.update();
-    fc.display();
+  // --- CUSTOMER STATE MANAGEMENT ---
+  int orderingIndex = -1;
+  for (int i = 0; i < customers.size(); i++) {
+    if (customers.get(i).state.equals("ordering")) {
+      orderingIndex = i;
+      break;
+    }
   }
 
-  // Update and draw customer
+  // Arrange waiting line positions
+  int waitCount = 0;
   for (Customer c : customers) {
-    c.update();
-    c.display();
+    if (c.state.equals("waiting")) {
+      c.targetX = 100 + waitCount * 60; // Left line
+      waitCount++;
+    } else if (c.state.equals("ordering")) {
+      c.targetX = width / 2 - 25; // Center
+    } else if (c.state.equals("eating")) {
+      c.targetX = width - 200; // Eating area (right)
+    }
   }
 
-  // Check for correct drop
-  if (draggingCircle != null) {
-  for (Customer c : customers) {
-    if (c.state.equals("waiting") && c.isPlaceholderHovered(draggingCircle.x, draggingCircle.y)) {
-      if (c.receiveFood(draggingCircle.c)) {
-        money += foodCost; // Reward for correct food
-        circles.remove(draggingCircle); // Remove the food circle after it's delivered
-        draggingCircle = null;
-        break; // Exit loop once food is successfully given
+  // Only one customer can be "ordering"
+  if (orderingIndex == -1) {
+    // Find first eligible waiting customer
+    for (Customer c : customers) {
+      if (c.state.equals("waiting") && c.stateTimer > 120) {
+        c.state = "ordering";
+        c.stateTimer = 0;
+        break;
       }
     }
   }
-}
+
+  // Update and draw customers
+  for (Customer c : customers) {
+    c.update();        // Handles movement (move towards targetX)
+    c.display();
+    c.stateTimer++;
+  }
   
+  // Check for correct drop
+  if (draggingCircle != null) {
+    for (Customer c : customers) {
+      if (c.state.equals("waiting") && c.isPlaceholderHovered(draggingCircle.x, draggingCircle.y)) {
+        if (c.receiveFood(draggingCircle.c)) {
+          money += foodCost; // Reward for correct food
+          circles.remove(draggingCircle); // Remove food after delivery
+          draggingCircle = null;
+          break; // Exit loop once food is successfully given
+        }
+      }
+    }
+  }
+
   boolean someoneIsWaiting = customers.stream().anyMatch(c -> c.state.equals("waiting"));
 
   spawnTimer++;
   if (spawnTimer > 120 && !someoneIsWaiting) {
-    customers.add(new Customer(randomName(), height / 2)); // Add new customer once no one is waiting
+    customers.add(new Customer(randomName(), height / 2));
     spawnTimer = 0;
   }
 }
